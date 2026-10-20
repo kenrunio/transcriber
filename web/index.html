@@ -881,7 +881,8 @@ async function skipUpdate() {
 async function setUpdateChecks(on) {
   updateInfo = await api("/api/update/settings", {method: "PUT", body: {check_updates: on}});
   if (on) await checkUpdate(true);
-  renderUpdate(); renderSettings();
+  renderUpdate();
+  if (page === "settings") renderSettings();
 }
 
 // ---- start --------------------------------------------------------------------
@@ -891,7 +892,15 @@ async function setUpdateChecks(on) {
   const ready = r && r.models.some(m => m.kind === "speech" && m.installed) && r.models.find(m => m.id === "ecapa").installed;
   go(ready ? "transcripts" : "models");
   setInterval(loadJobs, 4000);
-  checkUpdate(false);  // at most once a day, and only if update checks are set up and on
+  // update checks are opt-in: ask once (after the first speech model is in, so
+  // a new user isn't met by two questions), then check at most once a day
+  const u = await checkUpdate(false);
+  if (u && u.configured && !u.asked && ready) {
+    const yes = await dialog({title: "Check for new versions?",
+      body: "Transcriber can ask GitHub once a day whether a newer version is out. Nothing else is sent, and you can change this in Settings.",
+      ok: "Check for updates", cancel: "No thanks"});
+    await setUpdateChecks(yes);
+  }
 })();
 </script>
 </body>

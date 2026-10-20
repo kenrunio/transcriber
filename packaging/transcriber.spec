@@ -17,6 +17,26 @@ datas += collect_data_files("webview")             # WebView2 loader and JS
 binaries = collect_dynamic_libs("ctranslate2")      # the speech engine
 binaries += collect_dynamic_libs("onnxruntime")
 
+def version_info():
+    """Windows version details for Transcriber.exe: product name and version
+    (SignPath requires both on every signed file), from transcriber/__init__.py."""
+    import re
+    from PyInstaller.utils.win32.versioninfo import (FixedFileInfo, StringFileInfo, StringStruct,
+                                                    StringTable, VarFileInfo, VarStruct, VSVersionInfo)
+    text = open(os.path.join(ROOT, "transcriber", "__init__.py"), encoding="utf-8").read()
+    version = re.search(r'__version__ = "([^"]+)"', text).group(1)
+    nums = tuple((list(map(int, re.findall(r"\d+", version))) + [0, 0, 0, 0])[:4])
+    strings = [StringStruct(k, v) for k, v in (
+        ("CompanyName", "Kenny Green Ltd"), ("FileDescription", "Transcriber"),
+        ("FileVersion", version), ("InternalName", "Transcriber"),
+        ("LegalCopyright", "Copyright (c) 2026 Kenny Green Ltd. MIT licence."),
+        ("OriginalFilename", "Transcriber.exe"), ("ProductName", "Transcriber"),
+        ("ProductVersion", version))]
+    return VSVersionInfo(ffi=FixedFileInfo(filevers=nums, prodvers=nums),
+                         kids=[StringFileInfo([StringTable("040904B0", strings)]),
+                               VarFileInfo([VarStruct("Translation", [1033, 1200])])])
+
+
 a = Analysis(
     [os.path.join(ROOT, "window.py")],
     pathex=[ROOT],
@@ -35,7 +55,6 @@ exe = EXE(
     name="Transcriber",
     icon=os.path.join(ROOT, "assets", "transcriber.ico"),
     console=False,
-    version=os.path.join(SPECPATH, "version_info.txt") if os.path.exists(
-        os.path.join(SPECPATH, "version_info.txt")) else None,
+    version=version_info(),
 )
 coll = COLLECT(exe, a.binaries, a.datas, name="Transcriber")

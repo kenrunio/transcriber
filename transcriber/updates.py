@@ -1,6 +1,7 @@
 """Is there a newer version? Asks GitHub for the latest release of UPDATE_REPO,
-at most once a day (or when asked), and says so. Turned off in settings, or
-while UPDATE_REPO is empty.
+at most once a day (or when asked), and says so. Opt-in: the app asks the
+user once, and checks only if they agree; it can be turned off in Settings.
+Nothing is checked while UPDATE_REPO is empty.
 
 The installed program can also install it: download the installer, check that
 Windows finds it validly signed by UPDATE_PUBLISHER, run it silently and quit;
@@ -38,7 +39,8 @@ def settings():
             s = json.load(f)
     except (FileNotFoundError, ValueError):
         s = {}
-    s.setdefault("check_updates", True)
+    # No entry yet means the user hasn't been asked: the app contacts GitHub only
+    # after they say yes (the privacy policy promises nothing is sent unasked).
     return s
 
 
@@ -75,8 +77,8 @@ def status(force=False):
     latest release if one was found (cached for a day)."""
     s = settings()
     url = _api_url()
-    out = {"current": __version__, "enabled": bool(url) and s["check_updates"],
-           "configured": bool(url), "skipped": s.get("skipped_version")}
+    out = {"current": __version__, "enabled": bool(url) and s.get("check_updates") is True,
+           "configured": bool(url), "asked": "check_updates" in s, "skipped": s.get("skipped_version")}
     if not out["enabled"]:
         return out
     cached = s.get("last_check") or {}

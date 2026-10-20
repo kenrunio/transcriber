@@ -14,7 +14,7 @@ It installs for your user only (no administrator rights), adds Transcriber to
 the Start menu and, if you tick it, the desktop.
 
 Until releases are signed, Windows shows "Windows protected your PC": click
-**More info**, then **Run anyway**.
+**More info**, then **Run anyway**. See the [code signing policy](#code-signing-policy).
 
 On first start the **Models** page opens:
 
@@ -58,9 +58,11 @@ The window has three pages on the left: **Transcripts**, **Models** and
 6. **Save as Word** (or more formats: text, Markdown, subtitles). The file goes
    next to the recording, named "<recording> - Transcript.docx".
 
-**Settings** shows your computer, the version and update checks (once a day
-from GitHub; you can turn them off), and opens the data folder. Problems are
-written to `app.log` there.
+**Settings** shows your computer, the version and update checks, and opens
+the data folder. Problems are written to `app.log` there. The app asks once
+whether to check GitHub for new versions; it never does unless you agree.
+Your recordings and transcripts never leave your computer
+([privacy policy](PRIVACY.md)).
 
 ## Running from source
 
@@ -173,6 +175,23 @@ versions, update the `sha256` values in `transcriber/catalog.json`.
   the installed program starts here.
 - `packaging/`: the PyInstaller recipe, the Inno Setup script, build.bat and
   sign.bat. `.github/workflows/build.yml`: the release build.
+
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io/),
+certificate by [SignPath Foundation](https://signpath.org/).
+
+- Committers and reviewers: [Kenny Green (@kenrunio)](https://github.com/kenrunio)
+- Approvers: [Kenny Green (@kenrunio)](https://github.com/kenrunio)
+
+Only builds made by GitHub Actions from this repository's source
+(`.github/workflows/build.yml`) are signed, and each release is approved by
+hand before signing.
+
+Privacy policy: this program will not transfer any information to other
+networked systems unless specifically requested by the user or the person
+installing or operating it. Details, including the services it can contact
+when you ask it to (Hugging Face, PyPI, GitHub), are in [PRIVACY.md](PRIVACY.md).
 
 ## Licence
 

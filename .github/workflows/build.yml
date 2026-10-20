@@ -104,5 +104,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          $notes = "Windows installer for Transcriber ${{ steps.version.outputs.version }}. Download Transcriber-Setup-${{ steps.version.outputs.version }}.exe below and run it.`n`nCode signing policy: https://github.com/${{ github.repository }}#code-signing-policy"
           gh release create "${{ github.ref_name }}" (Get-ChildItem build/installer/Transcriber-Setup-*.exe).FullName `
-            --title "Transcriber ${{ steps.version.outputs.version }}" --generate-notes
+            --title "Transcriber ${{ steps.version.outputs.version }}" --notes $notes --generate-notes
