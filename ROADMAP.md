@@ -20,8 +20,11 @@ from a menu, downloads only what that computer needs, and is open source.
 3. **Hardware check and model menu.** The app detects the NVIDIA card, memory,
    cores and disk, recommends a speech model and estimates its speed; without a
    usable card it runs on the processor. `transcriber/catalog.json` lists the
-   models (Whisper sizes, turbo, distil English, ivrit.ai Hebrew) with size,
-   languages, licence and source; the Models page downloads and removes them.
+   models (Whisper sizes, turbo, distil English, ivrit.ai Hebrew, and the two
+   ONNX models from huggingface.co/kenrunio, each file pinned by SHA-256) with
+   size, languages, licence and source; the Models page downloads and removes
+   them. Tested from Hugging Face into an empty data folder: both ONNX models
+   downloaded and verified, then a transcription with them.
 4. **Installer.** `packaging\build.bat` (or the GitHub Actions build) makes
    `Transcriber-Setup-<version>.exe`: about 90 MB, installs per user without
    admin rights. No PyTorch, NVIDIA libraries or ffmpeg inside; on computers
@@ -44,10 +47,7 @@ from a menu, downloads only what that computer needs, and is open source.
 - **SignPath Foundation**: apply with the public repository; then add the
   repository variable and secret, match the slugs in the workflow, and set
   `UPDATE_PUBLISHER = "CN=SignPath Foundation"` (README, Signing).
-- **Upload the two ONNX models** to kenrunio/transcriber-speaker-onnx and
-  kenrunio/transcriber-punctuation-onnx on Hugging Face. The catalogue already
-  points there and pins each file's SHA-256; downloading, checksum refusal and a
-  transcription from a fresh data folder were tested against a local stand-in.
+
 - **Try it on a second computer**, including one without an NVIDIA card, and
   installing a new version over an old one.
 - The bundled FFmpeg (inside PyAV) includes the GPL-licensed x264 and x265
