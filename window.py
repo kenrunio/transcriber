@@ -2,7 +2,7 @@
 and no console. Run with pythonw: `pythonw window.py` (the desktop shortcut);
 the installed program (Transcriber.exe) starts here too.
 
-The page is the same one the browser mode shows; the server runs inside this
+The page is served by app.py's local server, which runs inside this
 process, so closing the window stops it, and any transcription in progress.
 If the app is already running (in a browser or another window), this window
 just shows that one."""

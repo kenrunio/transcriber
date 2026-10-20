@@ -1,5 +1,9 @@
-"""Transcriber: a small local web app. Run start.bat (or `python app.py`) and it
-opens http://127.0.0.1:5055 in the browser. Jobs run one at a time on this PC."""
+"""Transcriber's local server: the page the app window shows (window.py) and
+what it asks for. Jobs run one at a time on this PC.
+
+`python app.py` runs the server alone and opens the page in a web browser, for
+development; people use the app window."""
+import json
 import os
 import queue
 import re
@@ -14,7 +18,7 @@ from flask import Flask, abort, jsonify, request, send_file, send_from_directory
 from transcriber import __version__, catalog, export, hardware, pipeline, updates
 
 PORT = 5055
-from transcriber.paths import app_file
+from transcriber.paths import DATA_DIR, app_file
 app = Flask(__name__, static_folder=None)
 work = queue.Queue()
 edit_lock = threading.Lock()
@@ -74,7 +78,7 @@ def new_job():
 def browse():
     if picker:  # the app window's own file dialog (window.py sets this)
         return jsonify(path=picker() or "")
-    # Browser mode: the native Windows file picker, in its own process so Tk
+    # Development (python app.py): the native Windows file picker, in its own process so Tk
     # stays off Flask's threads.
     code = ("import tkinter as tk, tkinter.filedialog as fd; r=tk.Tk(); r.withdraw(); "
             "r.attributes('-topmost', True); print(fd.askopenfilename(title='Choose a recording', "
@@ -121,6 +125,33 @@ def audio(job_id):
     if not os.path.exists(path):
         abort(404)
     return send_file(path, mimetype="audio/wav", conditional=True)
+
+
+@app.get("/api/jobs/<job_id>/peaks")
+def peaks(job_id):
+    """The audio's outline for the player's waveform: the loudest sample in each
+    of 1,200 slices, 0..1. Worked out once, then kept in the job folder."""
+    job = job_or_404(job_id)
+    cached = job.path("peaks.json")
+    if not os.path.exists(cached):
+        wav = job.path("audio.wav")
+        if not os.path.exists(wav):
+            abort(404)
+        import numpy as np
+        import soundfile as sf
+        out, n = [], 1200
+        with sf.SoundFile(wav) as f:
+            duration = f.frames / f.samplerate
+            block = max(1, f.frames // n)
+            for _ in range(n):
+                data = f.read(block, dtype="float32")
+                if not len(data):
+                    break
+                out.append(float(np.abs(data).max()))
+        top = max(out) or 1.0
+        with open(cached, "w") as f:
+            json.dump({"duration": duration, "peaks": [round(p / top, 3) for p in out]}, f)
+    return send_file(cached, mimetype="application/json")
 
 
 @app.put("/api/jobs/<job_id>/speakers")
@@ -207,7 +238,7 @@ def regroup(job_id):
 def models_list():
     info = hardware.detect()
     dev, compute = hardware.device(info)
-    return jsonify(system=dict(info, device=dev, compute=compute, version=__version__,
+    return jsonify(system=dict(info, device=dev, compute=compute, version=__version__, data_dir=DATA_DIR,
                                recommended=hardware.recommended_speech(info)),
                    models=catalog.listing())
 
@@ -297,7 +328,9 @@ def do_export(job_id):
 @app.post("/api/reveal")
 def reveal():
     path = request.get_json().get("path", "")
-    if os.path.exists(path):
+    if os.path.isdir(path):
+        subprocess.Popen(["explorer", os.path.normpath(path)])
+    elif os.path.exists(path):
         subprocess.Popen(["explorer", "/select,", os.path.normpath(path)])
     return jsonify(ok=True)
 
@@ -324,7 +357,7 @@ def start_worker():
 
 
 def main():
-    """Browser mode: `python app.py` (start-browser.bat)."""
+    """Development: `python app.py` serves the page and opens it in a browser."""
     if already_running():
         # A second start must not pick up the first one's jobs and run them twice.
         print(f"Transcriber is already running; opening {URL}")

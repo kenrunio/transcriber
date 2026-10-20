@@ -34,32 +34,40 @@ Uninstalling keeps your transcripts' working files and downloaded models in
 
 ## Using it
 
-1. **New transcription**: choose the file and the speech model. Optional:
-   language, number of speakers, and names/terms to spell right (people's
-   names, company and product names, comma-separated).
-2. Wait. With an NVIDIA card an hour of audio takes about 10 minutes with the
-   most accurate model; the Models page shows an estimate for each model on
-   your computer. Closing the window stops the app; if a transcription is
-   running it asks first, and the job carries on from its last finished step
-   next time.
-3. **Speakers**: each voice gets a card with its longest sentence and a ▶ Listen
-   button. Type the name. Giving two voices the same name joins them.
-4. **Fix mistakes**: click a sentence to hear it, then move it (or the rest of
-   the paragraph) to another speaker, or correct its wording. **Replace all**
-   fixes a misspelling everywhere. If voices are badly mixed up, **Regroup
-   voices** with the right number of speakers (this resets names and moves).
-5. **Save as Word** (or text, Markdown, subtitles). The file goes next to the
-   recording, named "<recording> - Transcript.docx".
+The window has three pages on the left: **Transcripts**, **Models** and
+**Settings**.
 
-The app checks GitHub for a new version once a day; turn that off on the
-Models page. Problems are written to `app.log` in `%LOCALAPPDATA%\Transcriber`.
+1. **Transcripts → New transcription**: choose the recording and the speech
+   model. Optional: language, number of speakers, and names/terms to spell
+   right (people's names, company and product names, comma-separated). The
+   page shows how long it should take on your computer.
+2. Wait. With an NVIDIA card an hour of audio takes about 10 minutes with the
+   most accurate model. You can leave the page; closing the window stops the
+   app (it asks first if a transcription is running) and the job carries on
+   from its last finished step next time.
+3. **Speakers** (right-hand panel): type a name for each voice, and ▶ plays a
+   sample. Giving two voices the same name joins them.
+4. **The transcript**: click a sentence to hear it. A bar above the player
+   lets you move it (or the rest of the paragraph) to another speaker, or
+   correct its wording. **Replace all** fixes a misspelling everywhere. If
+   voices are badly mixed up, **Regroup voices** with the right number of
+   speakers (this resets names and moves).
+5. **The player**: click the waveform to jump; the coloured strip under it
+   shows who is speaking. Space plays and pauses; the speed can go from 0.75×
+   to 2×.
+6. **Save as Word** (or more formats: text, Markdown, subtitles). The file goes
+   next to the recording, named "<recording> - Transcript.docx".
+
+**Settings** shows your computer, the version and update checks (once a day
+from GitHub; you can turn them off), and opens the data folder. Problems are
+written to `app.log` there.
 
 ## Running from source
 
 Needs Python 3.11 or later (`py -3.11`). Run **setup.bat** once (it makes a
 virtual environment in `%USERPROFILE%\.venvs\transcription`), then
-**start.bat** for the app window, or **start-browser.bat** to use it in a web
-browser at http://127.0.0.1:5055. From source, NVIDIA's libraries come with
+**start.bat** to open the app window. For development, `python app.py` serves
+the same page at http://127.0.0.1:5055 in a web browser. From source, NVIDIA's libraries come with
 setup.bat's packages.
 
 ## Building the installer

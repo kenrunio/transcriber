@@ -7,7 +7,7 @@ from a menu, downloads only what that computer needs, and is open source.
 
 1. **Its own window.** `window.py` shows the app in a native window
    (pywebview on Edge WebView2); it asks before closing while a transcription
-   is running. Browser mode remains (`start-browser.bat`).
+   is running. It is the only way to run the app.
 2. **No PyTorch.** The speaker recognition (ECAPA) and punctuation models run
    through ONNX Runtime. `tools/export_models.py` makes the ONNX files and is
    the only part needing PyTorch. On a 90-minute test recording the ONNX
