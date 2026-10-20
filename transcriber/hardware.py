@@ -21,6 +21,20 @@ def _ram_gb():
     return s.ullTotalPhys / 2**30
 
 
+def _cpu_name():
+    """The processor's name as Windows records it, without the (R) and (TM):
+    e.g. "Intel Core Ultra 9 275HX"."""
+    try:
+        import re
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                            r"HARDWARE\DESCRIPTION\System\CentralProcessor\0") as k:
+            name = winreg.QueryValueEx(k, "ProcessorNameString")[0]
+        return " ".join(re.sub(r"\((R|TM|C)\)", "", name, flags=re.I).split())
+    except OSError:
+        return None
+
+
 def _gpu():
     """(name, memory GB) of the first NVIDIA card, or None."""
     try:
@@ -55,6 +69,7 @@ def detect():
             "gpu_mem_gb": round(gpu[1], 1) if gpu else 0,
             "gpu_driver": bool(gpu) and _cuda_driver(),
             "ram_gb": round(_ram_gb(), 1),
+            "cpu": _cpu_name(),
             "cores": os.cpu_count() or 4,
         }
     from . import cuda

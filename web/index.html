@@ -239,7 +239,7 @@ async function renderModels() {
           : s.gpu_driver ? " — not in use yet: download GPU support below" : " — not usable, so the processor is used")
           : "no NVIDIA card, so the processor is used"}</span>
         <span><b>Memory:</b> ${s.ram_gb} GB</span>
-        <span><b>Processor:</b> ${s.cores} threads</span>
+        <span><b>Processor:</b> ${s.cpu ? esc(s.cpu) + ` (${s.cores} threads)` : `${s.cores} threads`}</span>
         <span><b>Free disk:</b> ${s.disk_free_gb} GB</span>
       </div>
     </div>
