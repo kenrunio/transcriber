@@ -1,0 +1,108 @@
+# Builds the installer on GitHub's Windows runners; on a version tag (vX.Y.Z)
+# also publishes it as a GitHub release, which the app's update check finds.
+#
+# Signing with SignPath Foundation (free for open source) switches on when the
+# repository has the variable SIGNPATH_ORGANIZATION_ID and the secret
+# SIGNPATH_API_TOKEN (Settings > Secrets and variables > Actions). The project,
+# signing policy and artifact configuration slugs below must match the ones set
+# up at SignPath. Without them the installer is built unsigned.
+name: Build
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      SIGNPATH_ORG: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install the build tools
+        shell: pwsh
+        run: |
+          # the NVIDIA libraries are not bundled: the app downloads them on request
+          Get-Content requirements.txt | Where-Object { $_ -notmatch '^nvidia' } | Set-Content req-build.txt
+          python -m pip install --upgrade pip
+          python -m pip install -r req-build.txt -c constraints.txt pyinstaller
+          choco install innosetup --no-progress -y
+
+      - name: Read the version
+        id: version
+        shell: pwsh
+        run: |
+          $v = (Select-String -Path transcriber/__init__.py -Pattern '^__version__ = "(.+)"').Matches[0].Groups[1].Value
+          if ("${{ github.ref_type }}" -eq "tag" -and "${{ github.ref_name }}" -ne "v$v") {
+            throw "Tag ${{ github.ref_name }} does not match __version__ $v"
+          }
+          "version=$v" >> $env:GITHUB_OUTPUT
+
+      - name: Build the program
+        run: python -m PyInstaller --noconfirm --clean --distpath build/dist --workpath build/work packaging/transcriber.spec
+
+      - name: Upload the program for signing
+        if: env.SIGNPATH_ORG != ''
+        id: program
+        uses: actions/upload-artifact@v4
+        with:
+          name: program-unsigned
+          path: build/dist/Transcriber
+
+      - name: Sign Transcriber.exe (SignPath)
+        if: env.SIGNPATH_ORG != ''
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: transcriber
+          signing-policy-slug: release-signing
+          artifact-configuration-slug: program
+          github-artifact-id: ${{ steps.program.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: build/dist/Transcriber
+
+      - name: Build the installer
+        shell: pwsh
+        run: |
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /Q "/DAppVersion=${{ steps.version.outputs.version }}" `
+            "/DSourceDir=$PWD\build\dist\Transcriber" "/DOutDir=$PWD\build\installer" packaging\installer.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed" }
+
+      - name: Upload the installer
+        id: installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer
+          path: build/installer/Transcriber-Setup-*.exe
+
+      - name: Sign the installer (SignPath)
+        if: env.SIGNPATH_ORG != ''
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: transcriber
+          signing-policy-slug: release-signing
+          artifact-configuration-slug: installer
+          github-artifact-id: ${{ steps.installer.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: build/installer
+
+      - name: Publish the release
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ github.ref_name }}" (Get-ChildItem build/installer/Transcriber-Setup-*.exe).FullName `
+            --title "Transcriber ${{ steps.version.outputs.version }}" --generate-notes

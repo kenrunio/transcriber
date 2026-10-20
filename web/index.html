@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transcriber</title>
+<style>
+:root {
+  --bg: #f6f6f4; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6b66; --line: #e3e2dd;
+  --accent: #2f5fd0; --accent-ink: #fff; --hl: #fff4c2; --danger: #b3261e;
+  --s0:#2f5fd0; --s1:#c2410c; --s2:#15803d; --s3:#9333ea; --s4:#0e7490; --s5:#b45309;
+  --s6:#be185d; --s7:#4d7c0f; --s8:#1e40af; --s9:#7c2d12;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #161615; --panel: #20201f; --ink: #ecebe6; --muted: #9b9a94; --line: #34332f;
+    --accent: #7aa2ff; --accent-ink: #0b1020; --hl: #4a4220; --danger: #ff8a80;
+    --s0:#7aa2ff; --s1:#fb923c; --s2:#4ade80; --s3:#c084fc; --s4:#22d3ee; --s5:#fbbf24;
+    --s6:#f472b6; --s7:#a3e635; --s8:#93c5fd; --s9:#fca5a5;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 15px/1.5 "Segoe UI", system-ui, sans-serif; background: var(--bg); color: var(--ink); }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 6px 12px; }
+button:hover { border-color: var(--muted); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button.link { border: 0; background: none; padding: 0; color: var(--accent); }
+button.danger { color: var(--danger); }
+input, select, textarea { border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 6px 8px; }
+.app { display: grid; grid-template-columns: 260px 1fr; height: 100vh; }
+aside { border-right: 1px solid var(--line); background: var(--panel); overflow-y: auto; padding: 16px 12px; }
+aside h1 { font-size: 17px; margin: 0 4px 12px; }
+aside .job { display: block; width: 100%; text-align: left; border: 0; border-radius: 6px; padding: 8px; margin-bottom: 2px; background: none; }
+aside .job:hover { background: var(--bg); }
+aside .job.active { background: var(--bg); outline: 1px solid var(--line); }
+aside .job small { display: block; color: var(--muted); }
+main { overflow-y: auto; }
+.wrap { max-width: 980px; margin: 0 auto; padding: 24px 24px 120px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; margin-bottom: 16px; }
+.card h2 { margin: 0 0 12px; font-size: 16px; }
+label { display: block; font-size: 13px; color: var(--muted); margin: 12px 0 4px; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.grow { flex: 1; min-width: 200px; }
+.hint { font-size: 13px; color: var(--muted); }
+.bar { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; margin: 10px 0 6px; }
+.bar > div { height: 100%; background: var(--accent); transition: width .5s; }
+.title { font-size: 20px; font-weight: 600; margin: 0; }
+.speakers { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 10px; }
+.spk { border: 1px solid var(--line); border-left: 4px solid var(--c); border-radius: 8px; padding: 10px; }
+.spk input { width: 100%; font-weight: 600; }
+.spk .meta { font-size: 12px; color: var(--muted); margin-top: 6px; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.spk .sample { font-size: 13px; color: var(--muted); margin-top: 4px; font-style: italic; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.block { display: grid; grid-template-columns: 170px 1fr; gap: 14px; padding: 10px 0; border-top: 1px solid var(--line); }
+.block .who { font-weight: 600; color: var(--c); }
+.block .who small { display: block; font-weight: 400; color: var(--muted); }
+.para { margin: 0 0 10px; }
+.para:last-child { margin-bottom: 0; }
+.ln { cursor: pointer; border-radius: 3px; }
+.ln:hover { background: var(--bg); }
+.ln.sel { background: var(--hl); }
+.ln.playing { text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 3px; }
+.dock { position: fixed; left: 260px; right: 0; bottom: 0; background: var(--panel); border-top: 1px solid var(--line); padding: 10px 24px; }
+.dock .wrap { padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.dock audio { width: 100%; height: 36px; }
+.tools { display: none; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 14px; }
+.tools.on { display: flex; }
+.models { display: grid; gap: 10px; }
+.model { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: grid; grid-template-columns: 1fr auto; gap: 6px 16px; align-items: center; }
+.model h3 { margin: 0; font-size: 15px; }
+.model .facts { font-size: 13px; color: var(--muted); }
+.model .actions { grid-row: 1 / span 3; grid-column: 2; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; min-width: 150px; }
+.badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 10px; margin-left: 6px; vertical-align: 2px; }
+.badge.rec { background: var(--accent); color: var(--accent-ink); }
+.badge.ok { background: var(--line); color: var(--ink); }
+.badge.warn { background: var(--hl); color: var(--ink); }
+.sys { display: flex; flex-wrap: wrap; gap: 6px 24px; font-size: 14px; }
+.sys b { font-weight: 600; }
+.welcome { border-left: 4px solid var(--accent); }
+.update { border: 1px solid var(--accent); border-radius: 8px; padding: 10px; margin-bottom: 12px; font-size: 14px; }
+.update .row { margin-top: 6px; }
+.toast { position: fixed; top: 16px; right: 16px; background: var(--ink); color: var(--bg); padding: 10px 14px; border-radius: 8px; max-width: 460px; z-index: 9; }
+.err { color: var(--danger); }
+@media (max-width: 760px) {
+  .app { grid-template-columns: 1fr; height: auto; }
+  aside { border-right: 0; border-bottom: 1px solid var(--line); }
+  .dock { left: 0; }
+  .block { grid-template-columns: 1fr; gap: 2px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <h1>Transcriber</h1>
+    <button class="primary" style="width:100%;margin-bottom:8px" onclick="showNew()">+ New transcription</button>
+    <button style="width:100%;margin-bottom:12px" onclick="showModels()">Models</button>
+    <div id="update"></div>
+    <div id="jobs"></div>
+  </aside>
+  <main><div class="wrap" id="view"></div></main>
+</div>
+<div class="dock" id="dock" hidden>
+  <div class="wrap">
+    <div class="tools" id="tools"></div>
+    <audio id="player" controls preload="none"></audio>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const stamp = t => { t = Math.floor(t); const h = Math.floor(t/3600), m = Math.floor(t%3600/60), s = t%60;
+  return (h ? h + ":" + String(m).padStart(2,"0") : m) + ":" + String(s).padStart(2,"0"); };
+const mins = s => s < 60 ? Math.round(s) + " s" : Math.round(s/60) + " min";
+const color = id => `var(--s${id % 10})`;
+const STAGES = {queued: "Waiting", audio: "Extracting audio", transcribe: "Transcribing",
+  speakers: "Recognising voices", merge: "Putting it together", done: "Done", error: "Failed"};
+const LANGS = [["", "Detect automatically"], ["en", "English"], ["he", "Hebrew"], ["ar", "Arabic"],
+  ["ru", "Russian"], ["fr", "French"], ["de", "German"], ["es", "Spanish"], ["it", "Italian"],
+  ["pt", "Portuguese"], ["nl", "Dutch"], ["ja", "Japanese"], ["zh", "Chinese"], ["ko", "Korean"]];
+
+let current = null;      // {meta, transcript}
+let selected = null;     // line id
+let pollTimer = null;
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, {headers: {"Content-Type": "application/json"}, ...opts,
+    body: opts.body ? JSON.stringify(opts.body) : undefined});
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || r.statusText);
+  return data;
+}
+function toast(html, ms = 4000) {
+  const t = $("#toast"); t.innerHTML = html; t.hidden = false;
+  clearTimeout(toast.timer); toast.timer = setTimeout(() => t.hidden = true, ms);
+}
+
+async function loadJobs() {
+  const jobs = await api("/api/jobs");
+  $("#jobs").innerHTML = jobs.map(j => `
+    <button class="job ${current && current.meta.id === j.id ? "active" : ""}" onclick="openJob('${j.id}')">
+      ${esc(j.title)}
+      <small>${new Date(j.created * 1000).toLocaleDateString()} · ${STAGES[j.stage] || j.stage}${
+        j.stage === "transcribe" || j.stage === "speakers" ? " " + Math.round(j.progress * 100) + "%" : ""}</small>
+    </button>`).join("") || `<p class="hint">No transcriptions yet.</p>`;
+  return jobs;
+}
+
+// ---- new job --------------------------------------------------------------
+async function showNew() {
+  current = null; selected = null; $("#dock").hidden = true; clearInterval(pollTimer);
+  $("main").scrollTop = 0;
+  const {system, models} = await api("/api/models");
+  const speech = models.filter(m => m.kind === "speech" && m.installed);
+  if (!speech.length || !models.find(m => m.id === "ecapa").installed) return showModels();
+  const pick = (speech.find(m => m.recommended) || speech[0]).id;
+  $("#view").dataset.page = "new";
+  $("#view").innerHTML = `
+    <div class="card">
+      <h2>New transcription</h2>
+      <label>Video or audio file</label>
+      <div class="row">
+        <input id="src" class="grow" placeholder="C:\\path\\to\\recording.mp4">
+        <button onclick="browse()">Choose file…</button>
+      </div>
+      <div class="row">
+        <div class="grow"><label>Language</label>
+          <select id="lang" style="width:100%">${LANGS.map(([v, n]) => `<option value="${v}">${n}</option>`).join("")}</select></div>
+        <div class="grow"><label>Number of speakers</label>
+          <input id="nspk" type="number" min="1" max="40" placeholder="Work it out" style="width:100%"></div>
+        <div class="grow"><label>Speech model <button class="link" onclick="showModels()">(more models)</button></label>
+          <select id="model" style="width:100%">${speech.map(m =>
+            `<option value="${m.id}" ${m.id === pick ? "selected" : ""}>${esc(m.name)} · ~${m.minutes_per_hour} min per hour</option>`).join("")}
+          </select></div>
+      </div>
+      <label>Names and terms to spell right (optional, separated by commas)</label>
+      <textarea id="vocab" rows="2" style="width:100%" placeholder="e.g. Contoso, Dana Levi, Northwind Capital"></textarea>
+      <p class="hint">Words that sound like these get this spelling in the transcript.
+        Leave the speaker count empty unless the result mixes people up; you can change it afterwards too.
+        Times are rough estimates for this computer (${esc(system.cuda ? system.gpu : "no graphics card, using the processor")}).</p>
+      <button class="primary" onclick="start()">Transcribe</button>
+      <span id="newerr" class="err"></span>
+    </div>`;
+  loadJobs();
+}
+// ---- models -----------------------------------------------------------------
+let modelsTimer = null;
+async function showModels() {
+  current = null; selected = null; $("#dock").hidden = true; clearInterval(pollTimer);
+  $("main").scrollTop = 0;
+  await renderModels();
+  loadJobs();
+}
+async function renderModels() {
+  const {system: s, models} = await api("/api/models");
+  const speech = models.filter(m => m.kind === "speech");
+  const other = models.filter(m => m.kind !== "speech");
+  const haveSpeech = speech.some(m => m.installed);
+  const haveVoice = other.find(m => m.id === "ecapa").installed;
+  const card = m => {
+    const d = m.download;
+    let actions;
+    if (d && !d.error) {
+      const pct = d.total ? Math.round(100 * d.done / d.total) : 0;
+      actions = `<div style="width:150px"><div class="bar"><div style="width:${pct}%"></div></div>
+        <div class="hint">${pct}% of ${(m.size_mb / 1024).toFixed(1)} GB</div></div>
+        <button class="link" onclick="modelAction('${m.id}','cancel')">Cancel</button>`;
+    } else if (m.installed) {
+      actions = `<span class="badge ok">Installed</span>${m.removable
+        ? `<button class="link danger" onclick="modelAction('${m.id}','remove')">Remove</button>` : ""}`;
+    } else if (m.downloadable) {
+      actions = `<button class="primary" onclick="modelAction('${m.id}','download')">Download</button>`;
+    } else {
+      actions = `<span class="hint" style="text-align:right">Not offered for download yet:<br>copy it from another PC (README)</span>`;
+    }
+    return `<div class="model">
+      <h3>${esc(m.name)}${m.recommended && !m.installed || m.recommended && m.kind === "speech"
+        ? '<span class="badge rec">Recommended</span>' : ""}${
+        m.kind === "speech" && !m.fits ? '<span class="badge warn">Too big for your graphics card</span>' : ""}${
+        m.required ? '<span class="badge ok">Required</span>' : ""}</h3>
+      <div>${esc(m.about)}</div>
+      <div class="facts">${(m.size_mb / 1024).toFixed(1)} GB · ${esc(m.languages)} · licence ${esc(m.license)}${
+        m.minutes_per_hour ? ` · about ${m.minutes_per_hour} min per hour of audio here` : ""}</div>
+      ${d && d.error ? `<div class="err">Download failed: ${esc(d.error)}</div>` : ""}
+      <div class="actions">${actions}</div>
+    </div>`;
+  };
+  $("#view").dataset.page = "models";
+  $("#view").innerHTML = `
+    ${!haveSpeech || !haveVoice ? `<div class="card welcome"><h2>Welcome</h2>
+      <p style="margin:0">To get started, download a speech model below. The one marked
+      <b>Recommended</b> suits this computer.${haveVoice ? "" : " The speaker recognition model is needed too."}</p></div>` : ""}
+    <div class="card">
+      <h2>This computer</h2>
+      <div class="sys">
+        <span><b>Graphics card:</b> ${s.gpu ? esc(s.gpu) + ` (${s.gpu_mem_gb} GB)` + (s.cuda ? ", in use"
+          : s.gpu_driver ? " — not in use yet: download GPU support below" : " — not usable, so the processor is used")
+          : "no NVIDIA card, so the processor is used"}</span>
+        <span><b>Memory:</b> ${s.ram_gb} GB</span>
+        <span><b>Processor:</b> ${s.cores} threads</span>
+        <span><b>Free disk:</b> ${s.disk_free_gb} GB</span>
+      </div>
+    </div>
+    ${aboutCard()}
+    <div class="card"><h2>Speech models</h2>
+      <p class="hint" style="margin-top:-6px">Turn speech into text. Install one or more and choose per transcription.</p>
+      <div class="models">${speech.map(card).join("")}</div></div>
+    <div class="card"><h2>Speaker recognition, punctuation and GPU support</h2>
+      <div class="models">${other.map(card).join("")}</div></div>
+    ${haveSpeech && haveVoice ? `<button class="primary" onclick="showNew()">+ New transcription</button>` : ""}`;
+  clearTimeout(modelsTimer);
+  if (models.some(m => m.download && !m.download.error))
+    modelsTimer = setTimeout(() => { if ($("#view").dataset.page === "models") renderModels(); }, 1000);
+}
+async function modelAction(id, what) {
+  try {
+    if (what === "remove") {
+      if (!confirm("Remove this model? You can download it again later.")) return;
+      await api(`/api/models/${id}`, {method: "DELETE"});
+    } else {
+      await api(`/api/models/${id}/${what}`, {method: "POST"});
+    }
+  } catch (e) { toast(esc(e.message)); }
+  renderModels();
+}
+
+// ---- updates ----------------------------------------------------------------
+let updateInfo = null;
+async function checkUpdate(force) {
+  try { updateInfo = await api("/api/update" + (force ? "?force=1" : "")); }
+  catch (e) { updateInfo = null; }
+  renderUpdate();
+  return updateInfo;
+}
+function renderUpdate() {
+  const u = updateInfo, el = $("#update");
+  if (!u || !u.newer || (u.skipped === u.latest && !u.install)) { el.innerHTML = ""; return; }
+  const i = u.install;
+  let body;
+  if (i && i.stage !== "error") {
+    const pct = i.total ? Math.round(100 * i.done / i.total) : 0;
+    body = i.stage === "download"
+      ? `<div class="bar"><div style="width:${pct}%"></div></div><div class="hint">Downloading ${pct}%</div>`
+      : `<div class="hint">${i.stage === "verify" ? "Checking the signature…" : "Installing; the app restarts by itself."}</div>`;
+  } else {
+    body = `${i && i.error ? `<div class="err" style="font-size:13px">Not installed: ${esc(i.error)}</div>` : ""}
+      <div class="row">${u.can_install
+        ? `<button class="primary" onclick="installUpdate()">Install update</button>`
+        : `<button class="primary" onclick="openLink(updateInfo.installer || updateInfo.page)">Download</button>`}
+      <button class="link" onclick="openLink(updateInfo.page)">What's new</button>
+      <button class="link" onclick="skipUpdate()">Later</button></div>`;
+  }
+  el.innerHTML = `<div class="update"><b>Version ${esc(u.latest)} is available</b>
+    <div class="hint">You have ${esc(u.current)}.</div>${body}</div>`;
+}
+async function installUpdate() {
+  try { await api("/api/update/install", {method: "POST"}); } catch (e) { toast(esc(e.message)); return; }
+  const poll = async () => {
+    try { updateInfo = await api("/api/update"); } catch (e) { return; }  // the app has closed for the installer
+    renderUpdate();
+    if (updateInfo.install && updateInfo.install.stage !== "error") setTimeout(poll, 700);
+  };
+  poll();
+}
+async function openLink(url) {
+  try { await api("/api/open", {method: "POST", body: {url}}); } catch (e) { toast(esc(e.message)); }
+}
+async function skipUpdate() {
+  updateInfo = await api("/api/update/settings", {method: "PUT", body: {skipped_version: updateInfo.latest}});
+  renderUpdate();
+  if ($("#view").dataset.page === "models") renderModels();
+}
+async function setUpdateChecks(on) {
+  updateInfo = await api("/api/update/settings", {method: "PUT", body: {check_updates: on}});
+  if (on) await checkUpdate(true);
+  renderUpdate();
+  await renderModels();
+}
+function aboutCard() {
+  const u = updateInfo || {};
+  let state;
+  if (!u.configured) state = "Update checks are not set up in this build.";
+  else if (!u.enabled) state = "Update checks are off.";
+  else if (u.error && !u.latest) state = `Couldn't check for updates (${esc(u.error)}).`;
+  else if (u.newer) state = `Version ${esc(u.latest)} is available. <button class="link" onclick="openLink(updateInfo.installer || updateInfo.page)">Download</button>`;
+  else if (u.latest) state = "This is the latest version.";
+  else state = "Not checked yet.";
+  return `<div class="card"><h2>About</h2>
+    <div class="sys"><span><b>Transcriber</b> ${esc(u.current || "")}</span><span>${state}</span></div>
+    ${u.configured ? `<div class="row" style="margin-top:10px">
+      <label style="margin:0;color:var(--ink)"><input type="checkbox" ${u.enabled ? "checked" : ""}
+        onchange="setUpdateChecks(this.checked)"> Check for a new version when the app starts (asks GitHub once a day)</label>
+      ${u.enabled ? `<button class="link" onclick="checkUpdate(true).then(renderModels)">Check now</button>` : ""}</div>` : ""}
+  </div>`;
+}
+
+async function browse() {
+  const {path} = await api("/api/browse", {method: "POST"});
+  if (path) $("#src").value = path;
+}
+async function start() {
+  try {
+    const meta = await api("/api/jobs", {method: "POST", body: {
+      source: $("#src").value, language: $("#lang").value, model: $("#model").value,
+      num_speakers: $("#nspk").value || null, vocabulary: $("#vocab").value}});
+    openJob(meta.id);
+  } catch (e) { $("#newerr").textContent = " " + e.message; }
+}
+
+// ---- job view -------------------------------------------------------------
+async function openJob(id) {
+  clearInterval(pollTimer); selected = null;
+  current = await api(`/api/jobs/${id}`);
+  render();
+  $("main").scrollTop = 0;
+  loadJobs();
+  if (!["done", "error"].includes(current.meta.stage))
+    pollTimer = setInterval(async () => {
+      current = await api(`/api/jobs/${id}`);
+      if (["done", "error"].includes(current.meta.stage)) { clearInterval(pollTimer); render(); loadJobs(); }
+      else renderProgress();
+    }, 2000);
+}
+
+function renderProgress() {
+  const m = current.meta, el = $("#progress");
+  if (!el) return render();
+  el.innerHTML = `<div class="bar"><div style="width:${Math.round(m.progress * 100)}%"></div></div>
+    <div class="hint">${STAGES[m.stage] || m.stage}${m.progress ? " · " + Math.round(m.progress * 100) + "%" : ""}
+    ${m.message ? " — " + esc(m.message) : ""}</div>`;
+}
+
+function render() {
+  const m = current.meta, t = current.transcript;
+  $("#view").dataset.page = "job";
+  const head = `
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div><p class="title">${esc(m.title)}</p><div class="hint">${esc(m.source)}</div></div>
+        ${t ? `<div class="row">
+          <button class="primary" onclick="doExport('docx')">Save as Word</button>
+          <select onchange="if(this.value){doExport(this.value); this.value=''}">
+            <option value="">More formats…</option><option value="txt">Text (.txt)</option>
+            <option value="md">Markdown (.md)</option><option value="srt">Subtitles (.srt)</option></select>
+        </div>` : ""}
+      </div>
+      ${m.stage === "done" ? "" : `<div id="progress"></div>`}
+      ${m.stage === "error" ? `<p class="err">${esc(m.message)}</p><button onclick="resume()">Try again</button>` : ""}
+      ${["done", "error"].includes(m.stage) ? `<div style="margin-top:8px"><button class="link danger" onclick="removeJob()">Delete this job</button></div>` : ""}
+    </div>`;
+  if (!t) { $("#view").innerHTML = head; $("#dock").hidden = true; renderProgress(); return; }
+
+  const firstLine = {};
+  const longest = {};
+  for (const ln of t.lines) {
+    if (!(ln.speaker in firstLine)) firstLine[ln.speaker] = ln;
+    // the sample is the speaker's longest sentence in words: a short phrase can
+    // span a long pause, so duration picks things like "All right."
+    if (!longest[ln.speaker] || ln.text.length > longest[ln.speaker].text.length)
+      longest[ln.speaker] = ln;
+  }
+  const speakers = t.speakers.map(s => `
+    <div class="spk" style="--c:${color(s.id)}">
+      <input value="${esc(s.name)}" data-id="${s.id}" onchange="rename(${s.id}, this.value)"
+        onkeydown="if(event.key==='Enter')this.blur()">
+      <div class="sample">${longest[s.id] ? "“" + esc(longest[s.id].text.slice(0, 160)) + "”" : "No lines"}</div>
+      <div class="meta">
+        <span>${mins(s.talk_s)} · first at ${firstLine[s.id] ? stamp(firstLine[s.id].start) : "—"}</span>
+        ${longest[s.id] ? `<button class="link" onclick="play(${longest[s.id].start}, ${longest[s.id].id})">▶ Listen</button>` : ""}
+      </div>
+    </div>`).join("");
+
+  // consecutive lines with one name make a block
+  const names = Object.fromEntries(t.speakers.map(s => [s.id, s.name]));
+  const blocks = [];
+  for (const ln of t.lines) {
+    const b = blocks[blocks.length - 1];
+    if (b && names[b.speaker] === names[ln.speaker]) b.lines.push(ln);
+    else blocks.push({speaker: ln.speaker, lines: [ln]});
+  }
+  const breaks = new Set(t.breaks || []);
+  const body = blocks.map(b => {
+    const paras = [[]];
+    for (const ln of b.lines) {
+      if (breaks.has(ln.id) && paras[paras.length - 1].length) paras.push([]);
+      paras[paras.length - 1].push(`<span class="ln ${ln.id === selected ? "sel" : ""}" data-id="${ln.id}"
+          onclick="pick(${ln.id})">${esc(ln.text)}</span>`);
+    }
+    return `
+    <div class="block" style="--c:${color(b.speaker)}">
+      <div class="who">${esc(names[b.speaker])}<small>${stamp(b.lines[0].start)}</small></div>
+      <div>${paras.map(p => `<p class="para">${p.join(" ")}</p>`).join("")}</div>
+    </div>`;
+  }).join("");
+
+  $("#view").innerHTML = head + `
+    <div class="card">
+      <h2>Speakers</h2>
+      <p class="hint" style="margin-top:-6px">Type a name for each voice. Give two voices the same name to join them.
+        Click any sentence below to hear it and to move it to another speaker.</p>
+      <div class="speakers">${speakers}</div>
+      <div class="row" style="margin-top:12px">
+        <button onclick="addSpeaker()">+ Add a speaker</button>
+        <span class="hint" style="margin-left:auto">Voices mixed up?</span>
+        <input id="regroupN" type="number" min="1" max="40" placeholder="${t.speakers.length}" style="width:70px">
+        <button onclick="regroup()">Regroup voices</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:8px">
+        <h2 style="margin:0">Transcript</h2>
+        <div class="row">
+          <input id="findTxt" placeholder="Find" style="width:200px">
+          <input id="replTxt" placeholder="Replace with" style="width:170px">
+          <button onclick="replaceAll()">Replace all</button>
+        </div>
+      </div>
+      ${body}
+    </div>`;
+  $("#dock").hidden = false;
+  const player = $("#player");
+  const src = `/api/jobs/${m.id}/audio`;
+  if (!player.src.endsWith(src)) player.src = src;
+  renderTools();
+}
+
+function speakerOptions(sel) {
+  return current.transcript.speakers.map(s =>
+    `<option value="${s.id}" ${s.id === sel ? "selected" : ""}>${esc(s.name)}</option>`).join("");
+}
+function lineById(id) { return current.transcript.lines.find(l => l.id === id); }
+
+function pick(id) {
+  selected = id;
+  document.querySelectorAll(".ln.sel").forEach(e => e.classList.remove("sel"));
+  document.querySelector(`.ln[data-id="${id}"]`)?.classList.add("sel");
+  play(lineById(id).start);
+  renderTools();
+}
+function renderTools() {
+  const el = $("#tools");
+  const ln = selected != null && lineById(selected);
+  if (!ln) { el.classList.remove("on"); return; }
+  el.classList.add("on");
+  el.innerHTML = `<b>${stamp(ln.start)}</b>
+    <span>Move</span>
+    <select id="scope"><option value="line">this sentence</option>
+      <option value="rest">this and the rest of the paragraph</option>
+      <option value="block">the whole paragraph</option></select>
+    <span>to</span>
+    <select id="target">${speakerOptions(ln.speaker)}<option value="new">New speaker…</option></select>
+    <button class="primary" onclick="move()">Move</button>
+    <button class="link" onclick="selected=null; render()">Close</button>
+    <div class="row" style="width:100%">
+      <input id="lineText" class="grow" value="${esc(ln.text)}"
+        onkeydown="if(event.key==='Enter')saveText()">
+      <button onclick="saveText()">Save wording</button>
+    </div>`;
+}
+async function saveText() {
+  current.transcript = await api(`/api/jobs/${current.meta.id}/text`, {method: "PUT",
+    body: {id: selected, text: $("#lineText").value}});
+  render();
+}
+
+function play(t, lineId) {
+  const p = $("#player");
+  p.currentTime = Math.max(0, t - 0.2);
+  p.play();
+}
+$("#player").addEventListener("timeupdate", () => {
+  if (!current?.transcript) return;
+  const t = $("#player").currentTime;
+  const ln = current.transcript.lines.find(l => l.start <= t && t < l.end + 0.3);
+  const on = document.querySelector(".ln.playing");
+  if (on && (!ln || on.dataset.id != ln.id)) on.classList.remove("playing");
+  if (ln) document.querySelector(`.ln[data-id="${ln.id}"]`)?.classList.add("playing");
+});
+
+async function rename(id, name) {
+  current.transcript = await api(`/api/jobs/${current.meta.id}/speakers`, {method: "PUT", body: [{id, name}]});
+  render();
+}
+async function addSpeaker(name) {
+  name = name ?? prompt("Name of the new speaker:");
+  if (!name) return null;
+  const id = Math.max(-1, ...current.transcript.speakers.map(s => s.id)) + 1;
+  current.transcript = await api(`/api/jobs/${current.meta.id}/speakers`, {method: "PUT", body: [{id, name}]});
+  render();
+  return id;
+}
+async function move() {
+  let target = $("#target").value;
+  const scope = $("#scope").value;
+  if (target === "new") { target = await addSpeaker(); if (target == null) return; }
+  const lines = current.transcript.lines;
+  const names = Object.fromEntries(current.transcript.speakers.map(s => [s.id, s.name]));
+  const i = lines.findIndex(l => l.id === selected);
+  let a = i, b = i;
+  if (scope !== "line") {
+    const nm = names[lines[i].speaker];
+    while (scope === "block" && a > 0 && names[lines[a - 1].speaker] === nm) a--;
+    while (b + 1 < lines.length && names[lines[b + 1].speaker] === nm) b++;
+  }
+  const ids = lines.slice(a, b + 1).map(l => l.id);
+  current.transcript = await api(`/api/jobs/${current.meta.id}/lines`, {method: "PUT",
+    body: {ids, speaker: Number(target)}});
+  render();
+}
+async function replaceAll() {
+  try {
+    const r = await api(`/api/jobs/${current.meta.id}/replace`, {method: "POST",
+      body: {find: $("#findTxt").value, replace: $("#replTxt").value}});
+    current.transcript = r.transcript;
+    render();
+    toast(`Replaced ${r.count} time${r.count === 1 ? "" : "s"}.`);
+  } catch (e) { toast(esc(e.message)); }
+}
+async function regroup() {
+  const n = $("#regroupN").value;
+  if (!confirm(`Regroup into ${n || "an automatic number of"} speakers? Names and moves you made will be reset.`)) return;
+  current.transcript = await api(`/api/jobs/${current.meta.id}/regroup`, {method: "POST", body: {num_speakers: n || null}});
+  selected = null; render();
+}
+async function doExport(fmt) {
+  try {
+    const {path} = await api(`/api/jobs/${current.meta.id}/export`, {method: "POST", body: {format: fmt}});
+    const file = path.split(/[\\/]/).pop();
+    toast(`Saved <b>${esc(file)}</b> next to the recording.${/ \(\d+\)\.\w+$/.test(file)
+      ? " (The usual file is open in another program, so this is a new copy.)" : ""}
+      <button class="link" style="color:inherit;text-decoration:underline" onclick='reveal(${JSON.stringify(path)})'>Show in folder</button>`, 8000);
+  } catch (e) { toast(esc(e.message)); }
+}
+function reveal(path) { api("/api/reveal", {method: "POST", body: {path}}); }
+async function resume() { await api(`/api/jobs/${current.meta.id}/resume`, {method: "POST"}); openJob(current.meta.id); }
+async function removeJob() {
+  if (!confirm("Delete this job and its working files? Transcripts you saved stay where they are.")) return;
+  await api(`/api/jobs/${current.meta.id}`, {method: "DELETE"});
+  showNew();
+}
+
+(async () => {
+  const jobs = await loadJobs();
+  if (jobs.length) openJob(jobs[0].id); else showNew();
+  setInterval(loadJobs, 5000);
+  checkUpdate(false);  // at most once a day, and only if update checks are set up and on
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+# Only for tools/export_models.py, which makes the ONNX models from the
+# original PyTorch ones. The app itself needs only requirements.txt.
+# Install PyTorch first: pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+-r requirements.txt
+speechbrain
+transformers
+onnx
+onnxscript

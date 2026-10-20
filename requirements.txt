@@ -1,0 +1,10 @@
+faster-whisper
+nvidia-cublas-cu12
+nvidia-cudnn-cu12==9.*
+onnxruntime
+tokenizers
+soundfile
+scikit-learn
+flask
+python-docx
+pywebview
