@@ -44,9 +44,10 @@ from a menu, downloads only what that computer needs, and is open source.
 - **SignPath Foundation**: apply with the public repository; then add the
   repository variable and secret, match the slugs in the workflow, and set
   `UPDATE_PUBLISHER = "CN=SignPath Foundation"` (README, Signing).
-- **Host the two ONNX models** (speaker recognition 84 MB, punctuation 2.2 GB)
-  in a Hugging Face model repository or as release assets, and set their
-  `source.repo` in `catalog.json`, so the Models page can download them.
+- **Upload the two ONNX models** to kenrunio/transcriber-speaker-onnx and
+  kenrunio/transcriber-punctuation-onnx on Hugging Face. The catalogue already
+  points there and pins each file's SHA-256; downloading, checksum refusal and a
+  transcription from a fresh data folder were tested against a local stand-in.
 - **Try it on a second computer**, including one without an NVIDIA card, and
   installing a new version over an old one.
 - The bundled FFmpeg (inside PyAV) includes the GPL-licensed x264 and x265

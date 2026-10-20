@@ -22,8 +22,12 @@ On first start the **Models** page opens:
   Hebrew recordings do much better with the ivrit.ai models.
 - On a computer with an NVIDIA card, also download **GPU support** (1.4 GB,
   NVIDIA's libraries). Without it the processor is used, which is slower.
-- The speaker recognition model (needed) and the punctuation model (optional)
-  are not offered for download yet; see [Making the ONNX models](#making-the-onnx-models).
+- The speaker recognition model (needed, 84 MB) and the punctuation model
+  (optional, 2.2 GB) download from the same page. They come from
+  [kenrunio/transcriber-speaker-onnx](https://huggingface.co/kenrunio/transcriber-speaker-onnx)
+  and [kenrunio/transcriber-punctuation-onnx](https://huggingface.co/kenrunio/transcriber-punctuation-onnx)
+  on Hugging Face, and the app installs them only if every file matches the
+  checksum in `transcriber/catalog.json`.
 
 Uninstalling keeps your transcripts' working files and downloaded models in
 `%LOCALAPPDATA%\Transcriber`; delete that folder to remove them too.
@@ -116,7 +120,7 @@ The speaker recognition and punctuation models are ONNX versions of
 [SpeechBrain's ECAPA model](https://huggingface.co/speechbrain/spkrec-ecapa-voxceleb)
 (Apache-2.0) and
 [fullstop-punctuation-multilang-large](https://huggingface.co/oliverguhr/fullstop-punctuation-multilang-large)
-(MIT). Until they can be downloaded from the Models page, make them once; this
+(MIT), published on Hugging Face (see Installing). To make them yourself, which
 is the only part that needs PyTorch:
 
     py -3.11 -m venv %USERPROFILE%\.venvs\transcription-dev
@@ -124,7 +128,8 @@ is the only part that needs PyTorch:
     %USERPROFILE%\.venvs\transcription-dev\Scripts\python -m pip install -r requirements-dev.txt
     %USERPROFILE%\.venvs\transcription-dev\Scripts\python tools\export_models.py
 
-They are written to `%LOCALAPPDATA%\Transcriber\models`.
+They are written to `%LOCALAPPDATA%\Transcriber\models`. If you publish new
+versions, update the `sha256` values in `transcriber/catalog.json`.
 
 ## How it works
 

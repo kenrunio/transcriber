@@ -3,6 +3,7 @@ and downloading or removing models.
 
 Speech models go in MODELS_DIR/speech/<id>. A Whisper model that faster-whisper
 had already downloaded into the Hugging Face cache also counts as installed."""
+import hashlib
 import json
 import os
 import shutil
@@ -137,9 +138,13 @@ def _download(m):
         files = _files(m)
         state["total"] = sum(s for _, s in files) or m["size_mb"] * 1e6
         os.makedirs(part, exist_ok=True)
+        # HF_ENDPOINT is Hugging Face's own setting for a mirror (or a test server)
+        endpoint = os.environ.get("HF_ENDPOINT", "https://huggingface.co").rstrip("/")
+        expected = m.get("sha256", {})
         for name, _ in files:
-            url = f"https://huggingface.co/{m['source']['repo']}/resolve/main/{name}"
+            url = f"{endpoint}/{m['source']['repo']}/resolve/main/{name}"
             req = urllib.request.Request(url, headers={"User-Agent": "Transcriber"})
+            digest = hashlib.sha256()
             with urllib.request.urlopen(req, timeout=60) as r, \
                     open(os.path.join(part, name), "wb") as f:
                 while True:
@@ -149,7 +154,11 @@ def _download(m):
                     if not block:
                         break
                     f.write(block)
+                    digest.update(block)
                     state["done"] += len(block)
+            # the catalogue pins our own models' files: anything else is refused
+            if name in expected and digest.hexdigest() != expected[name]:
+                raise ValueError(f"{name} is not the expected file (its checksum differs); not installed.")
         os.makedirs(target, exist_ok=True)
         for name, _ in files:
             os.replace(os.path.join(part, name), os.path.join(target, name))

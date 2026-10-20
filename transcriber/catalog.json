@@ -1,5 +1,5 @@
 {
-  "_about": "Models the app offers. kind: speech (Whisper, CTranslate2 format for faster-whisper), voice, punctuation. cost: work relative to large-v3 (speed estimates). vram_gb: graphics memory needed at float16. source.repo: a Hugging Face repository; null means not offered for download yet.",
+  "_about": "Models the app offers. kind: speech (Whisper, CTranslate2 format for faster-whisper), voice, punctuation. cost: work relative to large-v3 (speed estimates). vram_gb: graphics memory needed at float16. source.repo: a Hugging Face repository; null means not offered for download. sha256: the files the app accepts, byte for byte.",
   "models": [
     {"id": "gpu-support", "kind": "gpu", "name": "GPU support (NVIDIA cuBLAS and cuDNN)",
      "about": "Lets the speech models run on your NVIDIA graphics card, many times faster than on the processor. Shown only on computers with an NVIDIA card.",
@@ -40,10 +40,16 @@
     {"id": "ecapa", "kind": "voice", "name": "Speaker recognition (SpeechBrain ECAPA, ONNX)",
      "about": "Tells the voices apart. Needed for every transcription.",
      "languages": "Any", "license": "Apache-2.0", "size_mb": 84, "required": true,
-     "files": ["ecapa.onnx"], "source": {"repo": null}},
+     "files": ["ecapa.onnx"], "source": {"repo": "kenrunio/transcriber-speaker-onnx"},
+     "sha256": {"ecapa.onnx": "880b8a42812266d562950b6890722056c38d0eaacfa8d629ebd3b50ca5ff9222"}},
     {"id": "punctuation", "kind": "punctuation", "name": "Punctuation repair (fullstop multilang large, ONNX)",
      "about": "Adds full stops and commas where Whisper leaves run-on text. Optional; English, German, French and Italian.",
      "languages": "English, German, French, Italian", "license": "MIT", "size_mb": 2239,
-     "files": ["model.onnx", "model.onnx.data", "tokenizer.json", "labels.json"], "source": {"repo": null}}
+     "files": ["model.onnx", "model.onnx.data", "tokenizer.json", "labels.json"],
+     "source": {"repo": "kenrunio/transcriber-punctuation-onnx"},
+     "sha256": {"model.onnx": "2f23ba5c04c43147f809ab65a2a6a1c633db2bafd62d4e38f02c97bb4ab56811",
+                "model.onnx.data": "226ba7398c91866dad290915964ca3ab6c99ab81cd955c5ead502438774ee8ca",
+                "tokenizer.json": "8124d1990cd91a86da7d51b0bd10b7913377f48710901e17b7db7b6f8cd5aee6",
+                "labels.json": "a19c8dc4400604b04a4da3cc356d7c5709110a0ce6770bd0c067697db88fd5a7"}}
   ]
 }
