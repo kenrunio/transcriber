@@ -68,9 +68,10 @@ Make the build environment once, without the NVIDIA packages:
     findstr /v /b "nvidia" requirements.txt > %TEMP%\req-build.txt
     %USERPROFILE%\.venvs\transcription-build\Scripts\python -m pip install -r %TEMP%\req-build.txt -c constraints.txt pyinstaller
 
-Then run **packaging\build.bat**. It writes
-`%LOCALAPPDATA%\Transcriber-build\installer\Transcriber-Setup-<version>.exe`.
-The installed program is about 340 MB; the installer about 90 MB.
+Then run **packaging\build.bat**. It writes `installer\Transcriber-Setup-<version>.exe`
+in the project folder (kept out of git); its work files go to
+`%LOCALAPPDATA%\Transcriber-build`. The installed program is about 340 MB; the
+installer about 90 MB.
 
 `constraints.txt` pins every library to the version the app was tested with
 (a newer PyAV once broke audio loading); update it deliberately, with pip
